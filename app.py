@@ -1,21 +1,23 @@
 from flask import Flask, request
-import sqlite3
+from flask_sqlalchemy import SQLAlchemy
+import os
 from sms_sender import send_sms
 from gtfs_parser import get_bus_info
 
 app = Flask(__name__)
 
-# DB setup (runs once)
-def init_db():
-    with sqlite3.connect('users.db') as conn:
-        c = conn.cursor()
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                phone TEXT PRIMARY KEY,
-                carrier TEXT
-            )
-        ''')
-init_db()
+# Load DB URL from environment
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+db = SQLAlchemy(app)
+
+# User model
+class User(db.Model):
+    phone = db.Column(db.String, primary_key=True)
+    carrier = db.Column(db.String)
+
+# Create tables if not exist
+with app.app_context():
+    db.create_all()
 
 @app.route('/sms', methods=['POST'])
 def sms_handler():
@@ -23,32 +25,33 @@ def sms_handler():
 
     phone = request.form.get('phone')
     stop = request.form.get('stop')
-    print(f"Received request: phone={phone}, stop={stop}")
-    phone = request.form.get('phone')
-    stop = request.form.get('stop')
-
     if not phone or not stop:
         return "Missing phone or stop", 400
 
-    # Look up carrier
-    with sqlite3.connect('users.db') as conn:
-        c = conn.cursor()
-        c.execute('SELECT carrier FROM users WHERE phone = ?', (phone,))
-        row = c.fetchone()
-
-    if not row:
+    user = User.query.filter_by(phone=phone).first()
+    if not user:
         return "Please reply with your carrier: Bell, Rogers, Telus, etc."
 
-    carrier_gateway = row[0]
-
-    # Get bus info
-    bus_info = get_bus_info(stop)
-    if not bus_info:
-        bus_info = "No buses found."
-
-    # Send SMS
+    carrier_gateway = user.carrier
+    bus_info = get_bus_info(stop) or "No buses found."
     send_sms(phone, carrier_gateway, bus_info)
+
     return "Sent!"
-    
-if __name__ == "__main__":
-    app.run(debug=True)
+
+@app.route('/register', methods=['POST'])
+def register_user():
+    phone = request.form.get('phone')
+    carrier = request.form.get('carrier')
+
+    if not phone or not carrier:
+        return "Missing phone or carrier", 400
+
+    existing_user = User.query.filter_by(phone=phone).first()
+    if existing_user:
+        return "Phone already registered", 400
+
+    new_user = User(phone=phone, carrier=carrier)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return "User registered successfully"
