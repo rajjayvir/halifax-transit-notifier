@@ -49,5 +49,6 @@ def sms_handler():
     # Send SMS
     send_sms(phone, carrier_gateway, bus_info)
     return "Sent!"
+    
 if __name__ == "__main__":
     app.run(debug=True)
