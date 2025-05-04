@@ -18,7 +18,7 @@ def send_sms(phone, carrier_gateway, message):
 
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": to_email}],
-        sender={"email": "rajjayvir0@gmail.com"},  # Must be a verified sender email in Brevo
+        sender={"email": "rajjayvir0@gmail.com"}, 
         subject="Transit Update",
         text_content=message
     )
