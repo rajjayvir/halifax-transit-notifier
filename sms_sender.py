@@ -1,33 +1,17 @@
-from dotenv import load_dotenv
+from twilio.rest import Client
 import os
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
-from pprint import pprint
 
-# Configure Brevo API key authorization
-configuration = sib_api_v3_sdk.Configuration()
-load_dotenv()
-configuration.api_key['api-key'] = os.getenv("SENDINBLUE_API_KEY")
-def send_sms(phone, carrier_gateway, message):
-    # Prepare the recipient
-    to_email = f"{phone}@{carrier_gateway}"
-    print(f"📤 Preparing to send to: {to_email}")
+def send_sms(to_number, _, message):
+    account_sid = os.environ.get("TWILIO_SID")
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_number = os.environ.get("TWILIO_PHONE")
 
-    # Create instance of the API class
-    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    client = Client(account_sid, auth_token)
 
-    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-        to=[{"email": to_email}],
-        sender={"email": "rajjayvir0@gmail.com"}, 
-        subject="Transit Update",
-        text_content=message
+    message = client.messages.create(
+        body=message,
+        from_=twilio_number,
+        to=to_number  # e.g. "+17828822311"
     )
 
-    try:
-        # Send the email
-        api_response = api_instance.send_transac_email(send_smtp_email)
-        pprint(api_response)
-        print("✅ Email sent successfully via Brevo API.")
-    except ApiException as e:
-        print("❌ Exception when sending email via Brevo API: %s\n" % e)
-
+    print(f"✅ SMS sent: {message.sid}")
