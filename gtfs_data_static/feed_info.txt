@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date,feed_version
+Halifax Transit,http://www.halifax.ca/transit,en,20250519,20250824,2025_05_May_20250502

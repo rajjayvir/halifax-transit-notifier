@@ -38,20 +38,20 @@ def sms_handler():
 
     return "Sent!"
 
-@app.route('/register', methods=['POST'])
-def register_user():
-    phone = request.form.get('phone')
-    carrier = request.form.get('carrier')
+# @app.route('/register', methods=['POST'])
+# def register_user():
+#     phone = request.form.get('phone')
+#     carrier = request.form.get('carrier')
 
-    if not phone or not carrier:
-        return "Missing phone or carrier", 400
+#     if not phone or not carrier:
+#         return "Missing phone or carrier", 400
 
-    existing_user = User.query.filter_by(phone=phone).first()
-    if existing_user:
-        return "Phone already registered", 400
+#     existing_user = User.query.filter_by(phone=phone).first()
+#     if existing_user:
+#         return "Phone already registered", 400
 
-    new_user = User(phone=phone, carrier=carrier)
-    db.session.add(new_user)
-    db.session.commit()
+#     new_user = User(phone=phone, carrier=carrier)
+#     db.session.add(new_user)
+#     db.session.commit()
 
-    return "User registered successfully"
+#     return "User registered successfully"
