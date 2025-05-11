@@ -1,9 +1,11 @@
 import pandas as pd
 from datetime import datetime
+import re
 
-# Load GTFS static data
+# Path to GTFS static data
 GTFS_PATH = "gtfs_data_static/"
 
+# Load GTFS files
 stops = pd.read_csv(GTFS_PATH + "stops.txt")
 routes = pd.read_csv(GTFS_PATH + "routes.txt")
 trips = pd.read_csv(GTFS_PATH + "trips.txt")
@@ -11,8 +13,38 @@ stop_times = pd.read_csv(GTFS_PATH + "stop_times.txt")
 calendar = pd.read_csv(GTFS_PATH + "calendar.txt")
 calendar_dates = pd.read_csv(GTFS_PATH + "calendar_dates.txt")
 
+# --- Utility to shorten destination names for SMS ---
+def shorten_destination(dest, limit=25):
+    abbreviations = {
+        "TERMINAL": "",
+        "VIA": "",
+        "CENTRE": "CTR",
+        "CENTER": "CTR",
+        "ROAD": "RD",
+        "STREET": "ST",
+        "AVENUE": "AVE",
+        "UNIVERSITY": "UNIV",
+        "DALHOUSIE": "DAL",
+        "SPRING GARDEN": "SG",
+        "LACEWOOD": "LCWD",
+        "MAIN": "MAIN",
+        "MUMFORD": "MUMF",
+        "HALIFAX": "HFX",
+    }
+
+    for word, abbr in abbreviations.items():
+        dest = re.sub(rf'\b{word}\b', abbr, dest, flags=re.IGNORECASE)
+
+    dest = re.sub(r'\s+', ' ', dest).strip()
+    return dest[:limit].strip()
+
+# --- Determine active service_ids based on date ---
 def get_active_service_ids():
-    today = datetime.strptime("20250525", "%Y%m%d").date()
+    # today = datetime.now().date()
+
+    # Optional testing override:
+    today = datetime.strptime("20250520", "%Y%m%d").date()
+
     weekday = today.strftime('%A').lower()
     today_str = today.strftime('%Y%m%d')
 
@@ -38,22 +70,20 @@ def get_active_service_ids():
     print(f"🗓️ Active services for today ({today_str}): {sorted(active_service_ids)}")
     return list(active_service_ids)
 
+# --- Main function to get schedule for a stop ---
 def get_schedule_for_stop(stop_code, max_results=3):
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
 
-    # Ensure stop_code is str for comparison
+    # Normalize stop code and stop IDs
     stop_code_str = str(stop_code).strip()
     stops['stop_code'] = stops['stop_code'].astype(str).str.strip()
     stops['stop_id'] = stops['stop_id'].astype(str).str.strip()
 
-    # Debug print first few stop codes
     print("🔍 Preview of stop_codes:", stops['stop_code'].dropna().unique()[:10])
 
-    # Try match by stop_code first
+    # Try stop_code first, then fallback to stop_id
     matched_stop = stops[stops['stop_code'] == stop_code_str]
-
-    # Fallback: Try matching stop_id directly if no stop_code match
     if matched_stop.empty and stop_code_str in stops['stop_id'].values:
         print(f"⚠️ stop_code '{stop_code_str}' not found. Trying as stop_id...")
         matched_stop = stops[stops['stop_id'] == stop_code_str]
@@ -67,6 +97,7 @@ def get_schedule_for_stop(stop_code, max_results=3):
     stop_times_for_stop = stop_times[stop_times['stop_id'] == int(stop_id)]
     upcoming = stop_times_for_stop[stop_times_for_stop['departure_time'] > current_time]
 
+    # Join with trips and routes
     upcoming = upcoming.merge(trips, on='trip_id')
     upcoming = upcoming[upcoming['service_id'].isin(active_services)]
     upcoming = upcoming.merge(routes, on='route_id')
@@ -81,8 +112,9 @@ def get_schedule_for_stop(stop_code, max_results=3):
     for _, row in upcoming.iterrows():
         route = row['route_short_name']
         time = row['departure_time'][:5]
-        destination = row['trip_headsign']
-        messages.append(f"🚌 Route {route} – {time} to {destination}")
+        destination = shorten_destination(row['trip_headsign'])
+
+        messages.append(f"🚌 {route} @ {time} → {destination}")
 
         metadata.append({
             "stop_id": stop_id,
@@ -93,12 +125,12 @@ def get_schedule_for_stop(stop_code, max_results=3):
 
     return "\n".join(messages), metadata
 
-# Terminal test block
+# --- CLI test runner ---
 if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("❌ Please provide a stop code or stop ID (e.g., 8312 or 6103)")
+        print("❌ Please provide a stop code or ID (e.g., 6104)")
         sys.exit(1)
 
     stop_code = sys.argv[1]
