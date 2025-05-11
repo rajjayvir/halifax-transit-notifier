@@ -4,6 +4,10 @@ from gtfs_parser import get_schedule_for_stop
 
 app = Flask(__name__)
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "pong", 200
+
 @app.route('/sms', methods=['POST'])
 def sms_handler():
     print("🔔 /sms endpoint hit")
