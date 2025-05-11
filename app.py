@@ -1,37 +1,28 @@
 from flask import Flask, request
-from flask_sqlalchemy import SQLAlchemy
-import os
 from sms_sender import send_sms
-from gtfs_parser import get_bus_info
+from gtfs_parser import get_schedule_for_stop
 
 app = Flask(__name__)
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-# db = SQLAlchemy(app)
 
-# # User model
-# class User(db.Model):
-#     phone = db.Column(db.String, primary_key=True)
-#     carrier = db.Column(db.String)
-
-# with app.app_context():
-#     db.create_all()
-# Send SMS via Twilio
 @app.route('/sms', methods=['POST'])
 def sms_handler():
     print("🔔 /sms endpoint hit")
 
     phone = request.form.get('From')
-    message = request.form.get('Body')
+    stop_code = request.form.get('Body')
 
-    if not phone or not message:
-        return "Missing phone or message", 400
+    if not phone or not stop_code:
+        return "Missing phone or stop code", 400
 
-    print(f"📥 Received from {phone}: {message}")
+    print(f"📥 Received request: phone={phone}, stop={stop_code}")
 
-    bus_info = get_bus_info(message) or "No buses found at that stop."
-    send_sms(phone, bus_info)
+    # Call GTFS static function (will add real-time later)
+    message, _ = get_schedule_for_stop(stop_code)
+
+    # Send SMS reply
+    send_sms(phone, message)
 
     return "OK", 200
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
