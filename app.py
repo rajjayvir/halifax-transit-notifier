@@ -5,7 +5,13 @@ from gtfs_realtime import get_predictions
 from datetime import datetime
 from gtfs_updater import update_gtfs
 
+
 app = Flask(__name__)
+
+@app.route('/ping', methods=['GET'])
+def ping():
+    print(f"Ping received at {datetime.now()}")
+    return "pong", 200
 
 @app.route('/sms', methods=['POST'])
 def sms_handler():
