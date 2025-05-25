@@ -1,17 +1,25 @@
 import pandas as pd
 from datetime import datetime
 import re
+import os
 
-# Path to GTFS static data
 GTFS_PATH = "gtfs_data_static/"
 
-# Load GTFS files
-stops = pd.read_csv(GTFS_PATH + "stops.txt")
-routes = pd.read_csv(GTFS_PATH + "routes.txt")
-trips = pd.read_csv(GTFS_PATH + "trips.txt")
-stop_times = pd.read_csv(GTFS_PATH + "stop_times.txt", dtype={"departure_time": str})
-calendar = pd.read_csv(GTFS_PATH + "calendar.txt")
-calendar_dates = pd.read_csv(GTFS_PATH + "calendar_dates.txt")
+def load_gtfs_data():
+    required_files = ["stops.txt", "routes.txt", "trips.txt", "stop_times.txt", "calendar.txt", "calendar_dates.txt"]
+    for file in required_files:
+        if not os.path.exists(os.path.join(GTFS_PATH, file)):
+            raise FileNotFoundError(f"🚫 Missing GTFS file: {file}. Did you run /update-gtfs?")
+
+    stops = pd.read_csv(GTFS_PATH + "stops.txt")
+    routes = pd.read_csv(GTFS_PATH + "routes.txt")
+    trips = pd.read_csv(GTFS_PATH + "trips.txt")
+    stop_times = pd.read_csv(GTFS_PATH + "stop_times.txt", dtype={"departure_time": str})
+    calendar = pd.read_csv(GTFS_PATH + "calendar.txt")
+    calendar_dates = pd.read_csv(GTFS_PATH + "calendar_dates.txt")
+
+    return stops, routes, trips, stop_times, calendar, calendar_dates
+
 
 # --- Utility to shorten destination names for SMS ---
 def shorten_destination(dest, limit=25):
@@ -39,7 +47,7 @@ def shorten_destination(dest, limit=25):
     return dest[:limit].strip()
 
 # --- Determine active service_ids based on date ---
-def get_active_service_ids():
+def get_active_service_ids(calendar, calendar_dates):
     today = datetime.now().date()
     weekday = today.strftime('%A').lower()
     today_str = today.strftime('%Y%m%d')
@@ -68,6 +76,7 @@ def get_active_service_ids():
 
 # --- Main function to get schedule for a stop ---
 def get_schedule_for_stop(stop_code, max_results=3):
+    stops, routes, trips, stop_times, calendar, calendar_dates = load_gtfs_data()
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
 
@@ -84,8 +93,7 @@ def get_schedule_for_stop(stop_code, max_results=3):
         return f"❌ Stop code or ID '{stop_code}' not found.", []
 
     stop_id = matched_stop.iloc[0]['stop_id']
-    active_services = get_active_service_ids()
-
+    active_services = get_active_service_ids(calendar, calendar_dates)
     stop_times_for_stop = stop_times[stop_times['stop_id'] == int(stop_id)]
     upcoming = stop_times_for_stop[stop_times_for_stop['departure_time'] > current_time]
 
