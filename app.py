@@ -54,11 +54,6 @@ def sms_handler():
     send_sms(phone, final_message)
     return "OK", 200
 
-@app.route('/ping', methods=['GET'])
-def ping():
-    print(f"Ping received at {datetime.now()}")
-    return "pong", 200
-
 @app.route('/update-gtfs', methods=['GET'])
 def update_gtfs_webhook():
     try:
