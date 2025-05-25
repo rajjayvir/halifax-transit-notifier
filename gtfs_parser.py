@@ -7,12 +7,12 @@ GTFS_PATH = "gtfs_data_static/"
 stops = pd.read_csv(GTFS_PATH + "stops.txt")
 routes = pd.read_csv(GTFS_PATH + "routes.txt")
 trips = pd.read_csv(GTFS_PATH + "trips.txt")
-stop_times = pd.read_csv(GTFS_PATH + "stop_times.txt")
+stop_times = pd.read_csv(GTFS_PATH + "stop_times.txt", dtype={"departure_time": str})
 calendar = pd.read_csv(GTFS_PATH + "calendar.txt")
 calendar_dates = pd.read_csv(GTFS_PATH + "calendar_dates.txt")
 
 def get_active_service_ids():
-    today = datetime.strptime("20250525", "%Y%m%d").date()
+    today = datetime.now().date()
     weekday = today.strftime('%A').lower()
     today_str = today.strftime('%Y%m%d')
 
@@ -47,9 +47,6 @@ def get_schedule_for_stop(stop_code, max_results=3):
     stops['stop_code'] = stops['stop_code'].astype(str).str.strip()
     stops['stop_id'] = stops['stop_id'].astype(str).str.strip()
 
-    # Debug print first few stop codes
-    print("🔍 Preview of stop_codes:", stops['stop_code'].dropna().unique()[:10])
-
     # Try match by stop_code first
     matched_stop = stops[stops['stop_code'] == stop_code_str]
 
@@ -80,8 +77,9 @@ def get_schedule_for_stop(stop_code, max_results=3):
 
     for _, row in upcoming.iterrows():
         route = row['route_short_name']
-        time = row['departure_time'][:5]
+        time = str(row['departure_time'])[:5]
         destination = row['trip_headsign']
+        # messages.append(now)
         messages.append(f"🚌 Route {route} – {time} to {destination}")
 
         metadata.append({

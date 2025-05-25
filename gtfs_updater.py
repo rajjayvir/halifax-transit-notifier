@@ -6,7 +6,7 @@ TARGET_FOLDER = "gtfs_data_static"
 
 def update_gtfs():
     print(f"📦 Downloading GTFS feed from: {GTFS_URL}")
-    response = requests.get(GTFS_URL)
+    response = requests.get(GTFS_URL, verify=False)
     if response.status_code != 200:
         print(f"❌ Failed to download GTFS: {response.status_code}")
         return
